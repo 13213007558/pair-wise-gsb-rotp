@@ -18,7 +18,7 @@ Although this library will continue to be maintained, if you're implementing a 2
 [![License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat)](https://github.com/mdp/rotp/blob/master/LICENSE)
 
 
-A ruby library for generating and validating one time passwords (HOTP & TOTP) according to [RFC 4226](https://datatracker.ietf.org/doc/html/rfc4226) and [RFC 6238](https://datatracker.ietf.org/doc/html/rfc6238).
+A ruby library for generating and validating one time passwords (HOTP, TOTP, and OCRA) according to [RFC 4226](https://datatracker.ietf.org/doc/html/rfc4226), [RFC 6238](https://datatracker.ietf.org/doc/html/rfc6238), and [RFC 6287](https://datatracker.ietf.org/doc/html/rfc6287).
 
 ROTP is compatible with [Google Authenticator](https://github.com/google/google-authenticator) available for [Android](https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2) and [iPhone](https://itunes.apple.com/en/app/google-authenticator/id388497605) and any other TOTP based implementations.
 
@@ -86,6 +86,30 @@ hotp.at(1401) # => "259769"
 hotp.verify("259769", 1401) # => 1401
 hotp.verify("259769", 1402) # => nil
 ```
+
+### OCRA challenge-response
+
+OCRA suites define the HMAC algorithm, response length, and fields used in
+the response. ROTP validates every supplied field against the parsed suite.
+RFC 6287 test vectors use hexadecimal keys, so pass `secret_encoding: :hex`;
+the default secret encoding remains Base32.
+
+```ruby
+key = "3132333435363738393031323334353637383930"
+ocra = ROTP::OCRA.new(key, "OCRA-1:HOTP-SHA1-6:QN08", secret_encoding: :hex)
+
+response = ocra.generate(challenge: "00000000") # => "237653"
+ocra.verify(response, challenge: "00000000")     # => true
+ocra.verify("000000", challenge: "00000000")     # => false
+```
+
+Numeric, alphanumeric, and hexadecimal challenges use the suite's `QN`,
+`QA`, and `QH` formats. Use `challenges:` for mutual challenge-response.
+`counter`, `password_hash`, `session`, and `timestamp` are accepted only
+when included in the suite, and their formats and lengths are derived from
+it. Unsupported suites or invalid parameters raise `ROTP::OCRA::InvalidSuite`
+or `ROTP::OCRA::InvalidParameter`; a response that simply does not match makes
+`verify` return `false`.
 
 ### Preventing reuse of Time based OTP's
 
