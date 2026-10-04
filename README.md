@@ -87,6 +87,27 @@ hotp.verify("259769", 1401) # => 1401
 hotp.verify("259769", 1402) # => nil
 ```
 
+### OCRA challenge responses (RFC 6287)
+
+The OCRA suite determines the hash, response length, challenge type, and fixed
+field sizes. Invalid suites or parameters that do not match the suite raise an
+`ROTP::OCRA::InvalidSuiteError` or `ROTP::OCRA::InvalidParameterError`. A valid
+request whose response does not match returns `false`.
+
+```ruby
+suite = "OCRA-1:HOTP-SHA256-8:C-QN08-PSHA1"
+ocra = ROTP::OCRA.new("base32secretkey3232", suite)
+password_hash = Digest::SHA1.digest("1234")
+
+response = ocra.generate(challenge: "12345678", counter: 0,
+                         password_hash: password_hash)
+ocra.verify(response, challenge: "12345678", counter: 0,
+            password_hash: password_hash) # => true
+
+# Numeric, alphanumeric, and hexadecimal challenges are encoded per the suite.
+# Hexadecimal RFC 6287 test keys can be used with `secret_encoding: :hex`.
+```
+
 ### Preventing reuse of Time based OTP's
 
 By keeping track of the last time a user's OTP was verified, we can prevent token reuse during
